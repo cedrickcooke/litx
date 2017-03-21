@@ -1,0 +1,16 @@
+[package]
+name = "litx"
+version = "0.1.0"
+authors = ["Cedrick Cooke <development@cedrickc.net>"]
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "litx"
+path = "src/bin/main.rs"
+doc = false
+
+[dependencies]
+lazy_static = "0.2.4"
+regex = "0.2.1"
