@@ -1,0 +1,35 @@
+S           -> SWS? Blocks TT::EOF
+Blocks      -> Block (SWS Blocks?)?
+Block       -> Text Block?
+            -> (Comment | Expr | Math) WS? Block?
+Text        -> TextItem WS? Text?
+TextItem    -> TT::Word | TT::Char | TT::Number
+            -> TT::Escaped | TT::KeyStart | TT::Quote
+Comment     -> TT::OpenComment CommentBody? TT::CloseComment
+CommentBody -> (CommentTerm | Comment) CommentBody?
+CommentTerm -> TT::BlankLine | TT::Space | TT::NewLine
+            -> TT::Word | TT::Char | TT::Number
+            -> TT::Escaped | TT::KeyStart | TT::Quote
+            -> TT::CloseExpression | TT::CloseMath
+            -> TT::OpenExpression | TT::OpenMath
+Expr        -> TT::OpenExpr ExprBody? TT::CloseExpr
+ExprBody    -> (AWS | ExprItem | ExprProp) ExprBody?
+ExprItem    -> ExprIdent | ExprLiteral | Comment | Expr | Math
+ExprProp    -> TT::KeyStart ExprIdent AWS ExprItem
+ExprIdent   -> (TT::Word | TT::Char) ExprIdent?
+ExprLiteral -> TT::Number | String
+Math        -> TT::OpenMath MathBody? TT::CloseMath
+MathBody    -> (AWS | MathTerm) MathBody?
+MathTerm    -> Comment | Expr | Math
+            -> TT::Char | TT::Escaped | TT::KeyStart
+            -> TT::Number | TT::Word
+String      -> TT::Quote StringBody? TT::Quote
+StringBody  -> StringTerm StringBody?
+StringTerm  -> TT::BlankLinke | TT::Space | TT::NewLine
+            -> TT::Word | TT::Char | TT::Number
+            -> TT::Escaped | TT::KeyStart
+            -> TT::CloseComment | TT::CloseExpression | TT::CloseMath
+            -> TT::OpenComment | TT::OpenExpression | TT::OpenMath
+AWS         -> (TT::BlankLine | TT:Space | TT::NewLine) AWS?
+SWS         -> TT::BlankLine WS?
+WS          -> (TT::Space | TT::NewLine) WS?

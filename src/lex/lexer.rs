@@ -1,3 +1,6 @@
+use super::TokenType;
+use super::Token;
+use super::TokenBuilder;
 use regex::Regex;
 
 macro_rules! decl_regex {
@@ -12,7 +15,7 @@ decl_regex!(RGX_BLANK_LINE, r#"^(?m)\n\r?(\s*\n\r?)+"#);
 decl_regex!(RGX_CLOSE_CMNT, r#"^!\}"#);
 decl_regex!(RGX_CLOSE_EXPR, r#"^\}"#);
 decl_regex!(RGX_CLOSE_MATH, r#"^\$\}"#);
-decl_regex!(RGX_ESCAPED,     r#"^\\\S"#);
+decl_regex!(RGX_ESCAPED,    r#"^\\\S"#);
 decl_regex!(RGX_KEY_START,  r#"^:"#);
 decl_regex!(RGX_NEW_LINE,   r#"^(?m)\n\r?"#);
 decl_regex!(RGX_NUMBER,     r#"^[0-9]+(\.[0-9]+)?"#);
@@ -25,27 +28,6 @@ decl_regex!(RGX_SPACE,      r#"^\s+"#);
 // So far: whitespace, quote, colon, {, }, $}, !), \ are forbidden.
 decl_regex!(RGX_WORD,       r#"^[^\s":\{\}(\$\})(!\})\\]+"#);
 decl_regex!(RGX_CHAR,       r#"^\S"#);
-
-#[derive(Copy, Clone)]
-#[derive(Debug)]
-#[derive(Eq, PartialEq)]
-pub enum TokenType {
-    BlankLine,
-    Char,
-    CloseComment,
-    CloseExpression,
-    CloseMath,
-    Escaped,
-    KeyStart,
-    NewLine,
-    Number,
-    OpenComment,
-    OpenExpression,
-    OpenMath,
-    Quote,
-    Space,
-    Word,
-}
 
 lazy_static! {
     static ref REGEX_TOKENTYPE_PAIR: [(&'static Regex, TokenType); 15] = [
@@ -74,45 +56,37 @@ lazy_static! {
 }
 
 #[derive(Clone)]
-#[derive(Debug)]
-pub struct Token<'a, 'b> {
-    pub ty: TokenType,
-    pub content: &'a str,
-    source_file_name: Option<&'b str>,
-    index: usize,
-    line: usize,
-    lspan: (usize, usize),
-}
-
-#[derive(Clone)]
 pub struct Lexer<'a, 'b> {
     source_string: &'a str,
-    source_file_name: Option<&'b str>,
+    source_filename: Option<&'b str>,
     current_line: usize,
     current_line_index: usize,
-    byte_index: usize
+    byte_index: usize,
+    eof_returned: bool
 }
 
 impl <'a> Lexer<'a, 'static> {
     pub fn new(source_string: &'a str) -> Lexer<'a, 'static> {
         Lexer {
             source_string: source_string,
-            source_file_name: None,
+            source_filename: None,
             current_line: 0,
             current_line_index: 0,
-            byte_index: 0
+            byte_index: 0,
+            eof_returned: false
         }
     }
 }
 
 impl <'a, 'b> Lexer<'a, 'b> {
-    pub fn new_with_filename(source_string: &'a str, source_file_name: &'b str) -> Lexer<'a, 'b> {
+    pub fn new_with_filename(source_string: &'a str, source_filename: &'b str) -> Lexer<'a, 'b> {
         Lexer {
             source_string: source_string,
-            source_file_name: Some(source_file_name),
+            source_filename: Some(source_filename),
             current_line: 0,
             current_line_index: 0,
-            byte_index: 0
+            byte_index: 0,
+            eof_returned: false
         }
     }
 }
@@ -121,18 +95,26 @@ impl <'a, 'b> Iterator for Lexer<'a, 'b> {
     type Item = Token<'a, 'b>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.byte_index == self.source_string.len() {
-            return None;
+            if self.eof_returned {
+                return None;
+            } else {
+                self.eof_returned = true;
+                return Some(Token::new_eof(self.source_filename));
+            }
         }
         let text = &self.source_string[self.byte_index..];
         for &(rgx, ty) in REGEX_TOKENTYPE_PAIR.iter() {
             if let Some(m) = rgx.find(text) {
                 assert!(m.start() == 0);
 
-                let token = Token {
-                    ty: ty, content: m.as_str(),
-                    source_file_name: self.source_file_name, index: self.byte_index, line: self.current_line,
-                    lspan: (self.current_line_index, self.current_line_index + m.end())
-                };
+                let token = TokenBuilder::new()
+                    .with_type(ty)
+                    .with_content(m.as_str())
+                    .with_source_filename(self.source_filename)
+                    .with_index(self.byte_index)
+                    .with_line(self.current_line)
+                    .with_linespan(self.current_line_index, self.current_line_index + m.end())
+                    .build().unwrap();
 
                 self.byte_index += m.end();
                 self.current_line_index += m.end();

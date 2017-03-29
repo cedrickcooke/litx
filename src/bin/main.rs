@@ -1,6 +1,17 @@
 extern crate litx;
 
-const TEST: &'static str =
+const _MINIMAL_TEST: &'static str = r#"{}"#;
+
+const _LITTLE_TEST: &'static str =
+r#"
+
+{frobnicate :foo "bar"}
+Same paragraph: {$t$}.
+
+New paragraph.
+"#;
+
+const _BIG_TEST: &'static str =
 r#"{!
     This is a simple, example litx document.
     Hopefully, this doesn't trip up the close comment: \!}
@@ -26,11 +37,13 @@ Even worse, what if we have a newline in a word? Foo\nbar.
 
 {h2 "Danger zone"}
 I think this might actually break things. Is this fine!? What about this: $25.
-"#;
+
+{ignore "This is a string which contains {! a comment !}"}
+
+{! This is another comment at the end. It contains "a string" !}"#;
 
 fn main() {
-    let lexer = litx::lex::Lexer::new(TEST);
-    for t in lexer {
-        println!(r#"{:?}"#, t);
-    }
+    let tokens = litx::lex::Lexer::new(_MINIMAL_TEST);
+    let tree = litx::parse::parse(tokens);
+    println!("{:#?}", tree);
 }
