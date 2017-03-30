@@ -1,4 +1,4 @@
-S           -> SWS? Blocks TT::EOF
+S           -> AWS? Blocks TT::EOF
 Blocks      -> Block (SWS Blocks?)?
 Block       -> Text Block?
             -> (Comment | Expr | Math) WS? Block?

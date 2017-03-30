@@ -45,6 +45,10 @@ impl <'a, 'b> Token<'a, 'b> {
     pub fn get_content(&self) -> &'a str {
         self.content
     }
+
+    pub fn get_graphviz_name(&self) -> String {
+        format!("{:?}_{}_{}", self.ty, self.source_filename.unwrap_or(""), self.index)
+    }
 }
 
 impl <'a, 'b> TokenBuilder<'a, 'b> {

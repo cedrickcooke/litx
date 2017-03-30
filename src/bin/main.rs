@@ -4,6 +4,7 @@ const _MINIMAL_TEST: &'static str = r#"{}"#;
 
 const _LITTLE_TEST: &'static str =
 r#"
+{litx :author "Cedrick Cooke"}
 
 {frobnicate :foo "bar"}
 Same paragraph: {$t$}.
@@ -43,7 +44,7 @@ I think this might actually break things. Is this fine!? What about this: $25.
 {! This is another comment at the end. It contains "a string" !}"#;
 
 fn main() {
-    let tokens = litx::lex::Lexer::new(_MINIMAL_TEST);
+    let tokens = litx::lex::Lexer::new(_LITTLE_TEST);
     let tree = litx::parse::parse(tokens);
-    println!("{:#?}", tree);
+    tree.write_graphviz(&mut std::io::stdout());
 }
