@@ -1,0 +1,21 @@
+#[derive(Debug)]
+pub enum ProductionType {
+    S,
+    Blocks,
+    Block,
+    Text,
+    Comment,
+    CommentBody,
+    Expr,
+    ExprBody,
+    ExprItem,
+    ExprProp,
+    ExprIdent,
+    Math,
+    MathBody,
+    String,
+    StringBody,
+    AnyWhiteSpace,
+    SigWhiteSpace,
+    WhiteSpace
+}

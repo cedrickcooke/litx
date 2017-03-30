@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "cargo-clippy", allow(trivial_regex))]
+
 use super::TokenType;
 use super::Token;
 use super::TokenBuilder;
@@ -105,7 +107,7 @@ impl <'a, 'b> Iterator for Lexer<'a, 'b> {
         let text = &self.source_string[self.byte_index..];
         for &(rgx, ty) in REGEX_TOKENTYPE_PAIR.iter() {
             if let Some(m) = rgx.find(text) {
-                assert!(m.start() == 0);
+                assert_eq!(0, m.start());
 
                 let token = TokenBuilder::new()
                     .with_type(ty)

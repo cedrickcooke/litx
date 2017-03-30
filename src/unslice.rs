@@ -2,10 +2,10 @@ use std;
 
 pub unsafe trait Unslice {
     fn unslice<'a>(&'a self, next: &'a Self) -> Option<&'a Self> {
-        match self.is_adjacent(next) {
-            true => unsafe { Some(self.unslice_unchecked(next)) },
-            false => None
+        if self.is_adjacent(next) {
+            unsafe { return Some(self.unslice_unchecked(next)); }
         }
+        None
     }
 
     fn is_adjacent(&self, next: &Self) -> bool;

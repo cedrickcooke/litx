@@ -1,4 +1,6 @@
+use ::graphviz::Graphviz;
 use super::TokenType;
+use std::io;
 
 #[derive(Clone)]
 #[derive(Debug)]
@@ -10,18 +12,6 @@ pub struct Token<'a, 'b> {
     index: usize,
     line: usize,
     linespan: (usize, usize),
-}
-
-#[derive(Clone)]
-#[derive(Debug)]
-#[derive(Default)]
-pub struct TokenBuilder<'a, 'b> {
-    ty: Option<TokenType>,
-    content: Option<&'a str>,
-    source_filename: Option<Option<&'b str>>,
-    index: Option<usize>,
-    line: Option<usize>,
-    linespan: Option<(usize, usize)>
 }
 
 impl <'b> Token<'static, 'b> {
@@ -45,10 +35,25 @@ impl <'a, 'b> Token<'a, 'b> {
     pub fn get_content(&self) -> &'a str {
         self.content
     }
+}
 
-    pub fn get_graphviz_name(&self) -> String {
+
+impl <'a, 'b, W: io::Write> Graphviz<W> for Token<'a, 'b> {
+    fn get_vertex_name(&self) -> String {
         format!("{:?}_{}_{}", self.ty, self.source_filename.unwrap_or(""), self.index)
     }
+}
+
+#[derive(Clone)]
+#[derive(Debug)]
+#[derive(Default)]
+pub struct TokenBuilder<'a, 'b> {
+    ty: Option<TokenType>,
+    content: Option<&'a str>,
+    source_filename: Option<Option<&'b str>>,
+    index: Option<usize>,
+    line: Option<usize>,
+    linespan: Option<(usize, usize)>
 }
 
 impl <'a, 'b> TokenBuilder<'a, 'b> {

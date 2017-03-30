@@ -46,5 +46,5 @@ I think this might actually break things. Is this fine!? What about this: $25.
 fn main() {
     let tokens = litx::lex::Lexer::new(_LITTLE_TEST);
     let tree = litx::parse::parse(tokens);
-    tree.write_graphviz(&mut std::io::stdout());
+    litx::graphviz::Graphviz::write_graph(&tree, &mut std::io::stdout()).unwrap();
 }

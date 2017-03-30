@@ -1,138 +1,31 @@
-#![allow(dead_code)]
-
 use ::lex::Token;
 use ::lex::TokenType;
-use std::io::Write;
+use super::Branch;
+use super::Production;
+use super::ProductionType;
 use std::iter::Peekable;
 
+/// This is a somewhat mechanical implementation of the LL(1) CFG specified by `grammar.cfg`.
+/// Small cleanups have been made to keep the parse tree relatively simple, but otherwise it is a fairly faithful rendition.
 #[derive(Debug)]
-pub enum ProductionType {
-    S,
-    Blocks,
-    Block,
-    Text,
-    TextItem,
-    Comment,
-    CommentBody,
-    CommentTerm,
-    Expr,
-    ExprBody,
-    ExprItem,
-    ExprProp,
-    ExprIdent,
-    ExprLiteral,
-    Math,
-    MathBody,
-    MathTerm,
-    String,
-    StringBody,
-    AnyWhiteSpace,
-    SigWhiteSpace,
-    WhiteSpace,
-    Terminal
-}
-
-#[derive(Debug)]
-pub enum Branch<'a, 'b> {
-    Terminal(Token<'a, 'b>),
-    Nonterminal(Production<'a, 'b>)
-}
-
-static mut PRODUCTION_ID: u64 = 0;
-
-#[derive(Debug)]
-pub struct Production<'a, 'b> {
-    ty: ProductionType,
-    id: u64,
-    children: Vec<Branch<'a, 'b>>
-}
-
-#[derive(Debug)]
-struct Parser<'a, 'b, I: Iterator<Item=Token<'a, 'b>>> {
+pub struct Parser<'a, 'b, I: Iterator<Item=Token<'a, 'b>>> {
     iter: Peekable<I>
 }
 
-pub fn parse<'a, 'b, I>(iter: I) -> Production<'a, 'b>
-where I: Iterator<Item=Token<'a, 'b>> {
-    let peekable = iter.peekable();
-    let mut parser = Parser { iter: peekable };
-    parser.parse_s()
-}
-
-impl <'a, 'b> Production<'a, 'b> {
-    pub fn write_graphviz<W: Write>(&self, writer: &mut W) {
-        writeln!(writer, "strict digraph {{").unwrap();
-        self.write_graphviz_item(writer);
-        writeln!(writer, "}}").unwrap();
-    }
-
-    fn write_graphviz_item<W: Write>(&self, writer: &mut W) {
-        let name = self.get_name();
-        for child in self.children.iter() {
-            match *child {
-                Branch::Terminal(ref token) => {
-                    writeln!(writer, "\t{} -> {};", name, token.get_graphviz_name()).unwrap();
-                },
-                Branch::Nonterminal(ref production) => {
-                    writeln!(writer, "\t{} -> {};", name, production.get_name()).unwrap();
-                    production.write_graphviz_item(writer);
-                }
-            }
-        }
-    }
-
-    fn get_name(&self) -> String {
-        format!("{:?}_{}", self.ty, self.id)
-    }
-}
-
-impl <'a, 'b> Production<'a, 'b> {
-    pub fn new_terminal(tok: Token<'a, 'b>) -> Self {
-        Production {
-            ty: ProductionType::Terminal,
-            id: unsafe {
-                let tmp = PRODUCTION_ID;
-                PRODUCTION_ID += 1;
-                tmp
-            },
-            children: vec![Branch::Terminal(tok)]
-        }
-    }
-
-    pub fn new_nonterminal(ty: ProductionType) -> Self {
-        const DEFAULT_CAPACITY: usize = 4;
-        Production {
-            ty: ty,
-            id: unsafe {
-                let tmp = PRODUCTION_ID;
-                PRODUCTION_ID += 1;
-                tmp
-            },
-            children: Vec::with_capacity(DEFAULT_CAPACITY)
-        }
-    }
-
-    pub fn push(&mut self, bran: Branch<'a, 'b>) {
-        self.children.push(bran);
-    }
-
-    pub fn push_production(&mut self, prod: Production<'a, 'b>) {
-        self.children.push(Branch::Nonterminal(prod));
-    }
-
-    pub fn push_terminal(&mut self, tok: Token<'a, 'b>) {
-        self.children.push(Branch::Terminal(tok));
-    }
-}
-
 impl <'a, 'b, I: Iterator<Item=Token<'a, 'b>>> Parser<'a, 'b, I> {
+    pub fn new(iter: I) -> Self {
+        Parser {
+            iter: iter.peekable()
+        }
+    }
+
     pub fn pop_token(&mut self) -> Token<'a, 'b> {
         self.iter.next().unwrap()
     }
 
     pub fn peek_type(&mut self) -> TokenType {
         self.iter.peek()
-            .map(|ref tok| tok.get_type())
+            .map(|tok| tok.get_type())
             .unwrap_or(TokenType::EOF)
     }
 
@@ -241,7 +134,7 @@ impl <'a, 'b, I: Iterator<Item=Token<'a, 'b>>> Parser<'a, 'b, I> {
         if self.peek_comment_body() {
             comment.push_production(self.parse_comment_body());
         }
-        assert!(self.peek_type() == TokenType::CloseComment);
+        assert_eq!(TokenType::CloseComment, self.peek_type());
         comment.push_terminal(self.pop_token());
         comment
     }
@@ -289,7 +182,7 @@ impl <'a, 'b, I: Iterator<Item=Token<'a, 'b>>> Parser<'a, 'b, I> {
         if self.peek_expr_body() {
             expr.push_production(self.parse_expr_body());
         }
-        assert!(self.peek_type() == TokenType::CloseExpression);
+        assert_eq!(TokenType::CloseExpression, self.peek_type());
         expr.push_terminal(self.pop_token());
         expr
     }
@@ -380,7 +273,7 @@ impl <'a, 'b, I: Iterator<Item=Token<'a, 'b>>> Parser<'a, 'b, I> {
         if self.peek_string() {
             Branch::Nonterminal(self.parse_string())
         } else {
-            assert!(self.peek_type() == TokenType::Number);
+            assert_eq!(TokenType::Number, self.peek_type());
             Branch::Terminal(self.pop_token())
         }
     }
@@ -397,7 +290,7 @@ impl <'a, 'b, I: Iterator<Item=Token<'a, 'b>>> Parser<'a, 'b, I> {
         if self.peek_math_body() {
             math.push_production(self.parse_math_body());
         }
-        assert!(self.peek_type() == TokenType::CloseMath);
+        assert_eq!(TokenType::CloseMath, self.peek_type());
         math.push_terminal(self.pop_token());
         math
     }
@@ -459,7 +352,7 @@ impl <'a, 'b, I: Iterator<Item=Token<'a, 'b>>> Parser<'a, 'b, I> {
         if self.peek_string_body() {
             string.push_production(self.parse_string_body());
         }
-        assert!(self.peek_type() == TokenType::Quote);
+        assert_eq!(TokenType::Quote, self.peek_type());
         string.push_terminal(self.pop_token());
         string
     }
